@@ -13,7 +13,7 @@ succ = \n.\f.\x. f (n f x)
 pred = \n.\f.\x. n (\g.\h. h (g f)) (\u. x) (\u. u)
 mult = \m.\n.\f.\x. m (n f) x
 
-# K constant
+# K consant
 k = \x.\y.x
 
 # Compose function
@@ -45,11 +45,24 @@ is_zero = \n.n (\_. false) true
 
 fact = z (\f.\n. (is_zero n) one (mult n (f (pred n))))
 
+# Pair enconding
+pair = \a.\b.\f. f a b
+fst = \p. p (\a.\b. a)
+snd = \p. p (\a.\b. b)
+
 # Lists enconding
 nil = \c.\n. n
-cons = \h.\t.\c.\n. c h (t c n)
+cons = \h.\t. \c.\n. c h (t c n)
 
+# List operations
 foldr = \l.\c.\n. l c n # apply list
+length = \l. l (\_. \n. succ n) zero
+map = \f.\l. \c.\n. l (\h.\t. c (f h) (t)) n
+append = \l.\x. foldr l cons (cons x nil)
+reverse = \l. foldr l (\h.\t. append t h) nil
+
+head = \l. l (\h.\_. h) nil
+tail = \l. fst (l (\h.\p. pair (snd p) (cons h (snd p))) (pair nil nil))
 
 # List example [1, 2, 3]
 list = (cons one (cons two (cons three nil)))
