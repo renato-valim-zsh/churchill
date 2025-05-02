@@ -1,0 +1,59 @@
+# Identity function
+id = \x.x
+
+# Church encoded naturals
+zero = \f.\x. x
+one = \f.\x. f x
+two = \f.\x. f (f x)
+three = \f.\x. f (f (f x))
+
+# math operations
+add = \m.\n.\f.\x. m f (n f x)
+succ = \n.\f.\x. f (n f x)
+pred = \n.\f.\x. n (\g.\h. h (g f)) (\u. x) (\u. u)
+mult = \m.\n.\f.\x. m (n f) x
+
+# K constant
+k = \x.\y.x
+
+# Compose function
+compose = \f.\g.\x. f (g x)
+
+# Booleans encoded as functions
+true = \x.\y.x
+false = \x.\y.y
+
+# not gate
+not = \b. b false true
+
+# and gate
+and = \a.\b. a (b true false) false
+
+# or gate
+or = \a.\b. a true b
+
+# xor gate
+xor = \a.\b. a (not b) b
+
+# nand gate
+nand = \a.\b. not (and a b)
+
+# Z combinator (for recursion)
+z = \f.(\x. f (\v. x x v)) (\x. f (\v. x x v))
+
+is_zero = \n.n (\_. false) true
+
+fact = z (\f.\n. (is_zero n) one (mult n (f (pred n))))
+
+# Lists enconding
+nil = \c.\n. n
+cons = \h.\t.\c.\n. c h (t c n)
+
+foldr = \l.\c.\n. l c n # apply list
+
+# List example [1, 2, 3]
+list = (cons one (cons two (cons three nil)))
+
+foldr list add zero # (add 1 (add 2 (add 3 zero)))
+
+fact three
