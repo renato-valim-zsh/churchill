@@ -83,7 +83,6 @@ fn reduce_once(expr: &Expr) -> Option<Expr> {
 /// Evaluate an expression to normal form by repeated reduction.
 pub fn evaluate(expr: &Expr) -> Result<Expr, String> {
     let mut current = expr.clone();
-    // TODO: Handle properly the maximum amount of reductions allowed
     for _ in 0..100000000 {
         if let Some(next) = reduce_once(&current) {
             current = next;
