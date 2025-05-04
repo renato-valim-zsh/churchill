@@ -28,9 +28,13 @@ fn run_file_mode(filename: &str, definitions: &mut HashMap<String, Expr>) {
             let name = lhs.trim();
             let expr_str = &rhs[1..].trim();
             if is_valid_ident(name) {
-                // This unwrap is safe beacuse we are checking
-                // if the ident is valid first.
-                let expr = parse(expr_str).unwrap();
+                let expr = match parse(expr_str) {
+                    Ok(expr) => expr,
+                    Err(err) => {
+                        eprintln!("Failed to parse expr: {}", err);
+                        return;
+                    }
+                };
                 let def = expand(&expr, definitions);
                 definitions.insert(name.to_string(), def);
                 continue;
