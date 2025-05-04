@@ -1,15 +1,18 @@
+use std::collections::HashMap;
 use std::env as std_env;
 use std::fs;
-use std::collections::HashMap;
 
 use churchill::ast::Expr;
-use churchill::parser::parse;
 use churchill::evaluator::{evaluate, expand};
+use churchill::parser::parse;
 use churchill::utils::is_valid_ident;
 
 /// Runs program in file mode: reads expressions and definitions from a file.
 fn run_file_mode(filename: &str, definitions: &mut HashMap<String, Expr>) {
-    let content = fs::read_to_string(filename).expect("Failed to read file");
+    let Ok(content) = fs::read_to_string(filename) else {
+        eprintln!("Failed to read file");
+        return;
+    };
     for raw in content.lines() {
         let uncommented = if let Some(pos) = raw.find('#') {
             &raw[..pos]
@@ -25,15 +28,33 @@ fn run_file_mode(filename: &str, definitions: &mut HashMap<String, Expr>) {
             let name = lhs.trim();
             let expr_str = &rhs[1..].trim();
             if is_valid_ident(name) {
-                let expr = parse(expr_str);
-                let def = expand(&expr, &definitions);
+                let expr = match parse(expr_str) {
+                    Ok(expr) => expr,
+                    Err(err) => {
+                        eprintln!("Failed to parse expr: {}", err);
+                        return;
+                    }
+                };
+                let def = expand(&expr, definitions);
                 definitions.insert(name.to_string(), def);
                 continue;
             }
         }
-        let expr = parse(line);
-        let expr = expand(&expr, &definitions);
-        let normal_form = evaluate(&expr);
+        let expr = match parse(line) {
+            Ok(expr) => expr,
+            Err(err) => {
+                eprintln!("Failed to parse expr: {}", err);
+                return;
+            }
+        };
+        let expr = expand(&expr, definitions);
+        let normal_form = match evaluate(&expr) {
+            Ok(nf) => nf,
+            Err(err) => {
+                eprintln!("Failed to evaluate expr: {}", err);
+                return;
+            }
+        };
 
         println!("{}", normal_form);
     }
@@ -49,9 +70,23 @@ fn run_expr_mode(args: &[String], definitions: &mut HashMap<String, Expr>) {
     if input.is_empty() {
         return;
     }
-    let expr = parse(input);
-    let expr = expand(&expr, &definitions);
-    let normal_form = evaluate(&expr);
+    let expr = match parse(input) {
+        Ok(expr) => expr,
+        Err(err) => {
+            eprintln!("Failed to parse expr: {}", err);
+            return;
+        }
+    };
+
+    let expr = expand(&expr, definitions);
+    let normal_form = match evaluate(&expr) {
+        Ok(nf) => nf,
+        Err(err) => {
+            eprintln!("Failed to evaluate expr: {}", err);
+            return;
+        }
+    };
+
     println!("{}", normal_form);
 }
 
@@ -83,39 +118,30 @@ fn run_repl(definitions: &mut HashMap<String, Expr>) {
                     let name = lhs.trim();
                     let rhs = &rhs[1..].trim();
                     if is_valid_ident(name) {
-                        match std::panic::catch_unwind(|| parse(rhs)) {
+                        match parse(rhs) {
                             Ok(expr) => {
-                                let def = expand(&expr, &definitions);
+                                let def = expand(&expr, definitions);
                                 definitions.insert(name.to_string(), def.clone());
                                 println!("Defined {} = {}", name, def);
                             }
                             Err(err) => {
-                                if let Some(msg) = err.downcast_ref::<&str>() {
-                                    println!("Error: {}", msg);
-                                } else if let Some(msg) = err.downcast_ref::<String>() {
-                                    println!("Error: {}", msg);
-                                } else {
-                                    println!("Unknown error during parsing");
-                                }
+                                eprintln!("Error: {}", err);
                             }
                         }
                         continue;
                     }
                 }
-                match std::panic::catch_unwind(|| parse(input)) {
+                match parse(input) {
                     Ok(expr) => {
-                        let expr = expand(&expr, &definitions);
-                        let nf = evaluate(&expr);
-                        println!("{}", nf);
+                        let expr = expand(&expr, definitions);
+
+                        match evaluate(&expr) {
+                            Ok(nf) => println!("{}", nf),
+                            Err(err) => eprintln!("Error: {}", err),
+                        }
                     }
                     Err(err) => {
-                        if let Some(msg) = err.downcast_ref::<&str>() {
-                            println!("Error: {}", msg);
-                        } else if let Some(msg) = err.downcast_ref::<String>() {
-                            println!("Error: {}", msg);
-                        } else {
-                            println!("Unknown error during parsing");
-                        }
+                        eprintln!("Error: {}", err);
                     }
                 }
             }
